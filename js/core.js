@@ -363,8 +363,8 @@
         { name: "瀝青混凝土基層舖築", section: "", duration: 30, amount: 8000000, predecessors: ["路床及級配層舖築"], lag: 0, note: "", category: "路面工程", parent: "路面工程" },
         { name: "瀝青混凝土面層舖築", section: "", duration: 25, amount: 7000000, predecessors: ["瀝青混凝土基層舖築"], lag: 0, note: "面層攤鋪應注意氣溫及雨天不可施工限制", category: "路面工程", parent: "路面工程" },
         { name: "交通標誌標線及安全設施", section: "", duration: 20, amount: 3500000, predecessors: ["瀝青混凝土面層舖築"], lag: 0, note: "", category: "交通安全設施" },
-        { name: "植栽及綠美化", section: "", duration: 30, amount: 2500000, predecessors: ["路基開挖及土方工程"], lag: 30, note: "與路面工程平行施作，不影響要徑", category: "環境綠美化" },
-        { name: "竣工整理", section: "", duration: 15, amount: 1500000, predecessors: ["交通標誌標線及安全設施", "植栽及綠美化"], lag: 0, note: "", category: "其他" },
+        { name: "植栽綠美化", section: "", duration: 30, amount: 2500000, predecessors: ["路基開挖及土方工程"], lag: 30, note: "與路面工程平行施作，不影響要徑", category: "環境綠美化" },
+        { name: "竣工整理", section: "", duration: 15, amount: 1500000, predecessors: ["交通標誌標線及安全設施", "植栽綠美化"], lag: 0, note: "", category: "其他" },
       ],
     },
   };
