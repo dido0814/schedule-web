@@ -266,52 +266,87 @@
   }
 
   // ───────────────────────── 文字說明（text_generator.py） ─────────────────────────
-  // 主要工作項目：取最上層工項，去掉括號補充與字尾「工程」，組成「道路、排水…等工程」
+  // Word 說明文字。回傳的每段都是 runs 陣列：{ t: 文字, edit: true 表示制式文字、需依個案修改（Word 以紅字標示）}
+  const cleanName = (n) => String(n || "").replace(/[(（][^)）]*[)）]/g, "").trim();
+  // 名稱本身已含「及」時改用頓號串接，避免「A及B及C」
+  const joinNames = (names) => (names.length > 1 && !names.some((n) => n.includes("及"))
+    ? names.slice(0, -1).join("、") + "及" + names[names.length - 1] : names.join("、"));
+
+  // 主要工作項目：取最上層工項，去掉括號補充與字尾「工程」
   function mainWorkNames(items) {
     const names = [];
     for (const it of items) {
       if (!it.name || it.milestone || (it.level || 0) > 0) continue;
-      const n = it.name.replace(/[(（][^)）]*[)）]/g, "").replace(/工程$/, "").trim();
+      const n = cleanName(it.name).replace(/工程$/, "");
       if (n && !names.includes(n)) names.push(n);
     }
     return names;
   }
 
-  function generateIntro(projectName, items) {
-    const total = items.filter((it) => it.name).reduce((m, it) => Math.max(m, it.end_day || 0), 0);
-    const names = mainWorkNames(items);
-    const months = Math.max(Math.ceil(total / 30), 1);
-    return `${projectName}之主要工作項目包括${names.join("、")}等工程，整體工期可於${total}日曆天（約${months}個月）內完成，施工預定進度表詳表○○所示。`;
+  // 把最上層工項分成施工階段：全部都有填「階段」就照階段分；否則把施工期間重疊的工項併成同一階段
+  function buildStages(tops) {
+    const sorted = tops.slice().sort((x, y) => x.start_day - y.start_day || x.end_day - y.end_day);
+    const stages = [];
+    const byStage = sorted.length > 0 && sorted.every((it) => (it.stage || "").trim());
+    for (const it of sorted) {
+      const key = byStage ? it.stage.trim() : null;
+      let st = byStage ? stages.find((x) => x.key === key) : stages[stages.length - 1];
+      if (!st || (!byStage && it.start_day > st.end)) {
+        st = { key, items: [], start: it.start_day, end: it.end_day };
+        stages.push(st);
+      }
+      st.items.push(it);
+      st.start = Math.min(st.start, it.start_day);
+      st.end = Math.max(st.end, it.end_day);
+    }
+    return stages;
   }
 
-  function generateItemParagraph(item) {
-    if (item.milestone) return `里程碑「${item.name || ""}」：預計於第${item.end_day || 0}日達成。`;
-    let name = item.name || "";
-    if (item.number) name = `${item.number}　${name}`;
-    const section = item.section || "";
-    const start = item.start_day, end = item.end_day;
-    const duration = start && end ? end - start + 1 : item.duration;
-    const note = (item.note || "").trim().replace(/[。.]+$/, "");
-    const loc = section ? `（${section}）` : "";
-    let s = `${name}${loc}：工期${duration}日曆天（第${start}～${end}日）`;
-    s += note ? `；${note}。` : "。";
-    return s;
-  }
-
-  function generateFullText(projectName, items) {
+  function generateReport(projectName, items) {
     const valid = items.filter((it) => it.name);
-    return [generateIntro(projectName, valid)].concat(valid.map(generateItemParagraph));
-  }
+    const tasks = valid.filter((it) => !it.milestone);
+    const tops = tasks.filter((it) => (it.level || 0) === 0);
+    const total = valid.reduce((m, it) => Math.max(m, it.end_day || 0), 0);
+    const months = (total / 30).toFixed(1).replace(/\.0$/, "");
+    const note = (it) => (it.note || "").trim().replace(/[。.；;，,]+$/, "");
 
-  // 要徑說明（精簡成一段）
-  function generateCriticalText(items) {
-    const valid = items.filter((it) => it.name && !it.milestone);
-    const crit = valid.filter((it) => it.is_critical).map((it) => it.name);
-    if (!crit.length) return "";
-    let s = `本計畫要徑為「${crit.join("→")}」，上述工項任一延誤均將影響總工期，應優先管控`;
-    const nc = valid.filter((it) => !it.is_critical && (it.total_float || 0) > 0);
-    s += nc.length ? `；其餘工項尚有浮時（${nc.map((it) => `${it.name}${it.total_float}日曆天`).join("、")}），可彈性調度。` : "。";
-    return s;
+    const intro = [
+      { t: `本工程預定工期為 ${total}日曆天（約${months}個月），主要工作包含${mainWorkNames(valid).join("、")}等。` },
+      { t: "施工採分區、分階段及適度交叉作業方式辦理，以提升施工效率並確保工程如期完成。", edit: true },
+    ];
+
+    const stages = buildStages(tops).map((st, i) => {
+      const multi = st.items.length > 1;
+      const title = st.key ? st.key.replace(/[:：]\s*$/, "") : joinNames(st.items.map((it) => cleanName(it.name)));
+      const runs = [{ t: `${i + 1}. ${title}（第${st.start}～${st.end}日）：`, bold: true }];
+      st.items.forEach((it, k) => {
+        const parts = [];
+        if (multi) parts.push(k === 0 ? `${cleanName(it.name)}自第${it.start_day}日起施作` : `${cleanName(it.name)}於第${it.start_day}～${it.end_day}日同步施作`);
+        const kids = tasks.filter((c) => c._effective_parent === it.name).map((c) => cleanName(c.name));
+        if (kids.length) parts.push(`依序辦理${joinNames(kids)}`);
+        if (note(it)) parts.push(note(it));
+        const end = k === st.items.length - 1 ? "。" : "；";
+        if (!kids.length && !note(it)) {
+          // 沒有可用的說明，放一句制式文字提醒補寫
+          runs.push({ t: (parts.length ? parts.join("，") + "，" : "") });
+          runs.push({ t: `依核定施工計畫辦理${cleanName(it.name)}相關作業，並落實品質及安全管理`, edit: true });
+          runs.push({ t: end });
+        } else {
+          runs.push({ t: parts.join("，") + end });
+        }
+      });
+      return runs.filter((r) => r.t);
+    });
+
+    // 進度管制節點：要徑上工期最長的三個工項
+    const crit = tasks.filter((it) => it.is_critical).sort((x, y) => (y.end_day - y.start_day) - (x.end_day - x.start_day)).slice(0, 3)
+      .sort((x, y) => x.start_day - y.start_day).map((it) => cleanName(it.name));
+    const closing = [];
+    if (crit.length) closing.push({ t: `施工期間將以${joinNames(crit)}為主要進度管制節點，` });
+    else closing.push({ t: "施工期間將" });
+    closing.push({ t: "定期檢討施工進度，並針對降雨、管線遷移及施工介面等影響因素，適時調整工序與資源配置，降低工期延誤風險。", edit: true });
+
+    return { intro, stages, closing };
   }
 
   // ───────────────────────── 範本（templates_lib.py） ─────────────────────────
@@ -346,7 +381,7 @@
     CATEGORY_COLORS, CATEGORY_ORDER, colorFor,
     isMilestone, computeSchedule, computeCriticalPath, bindingPredecessors,
     effectiveParent, computeNumbering, moveItem, indentItem, outdentItem,
-    getScheduledItems, totalDuration, generateFullText, generateCriticalText, getTemplate, listTemplates,
+    getScheduledItems, totalDuration, generateReport, getTemplate, listTemplates,
     parseAmount, itemAmount, totalAmount, formatAmount, cumulativePercent,
   };
 })(typeof window !== "undefined" ? window : globalThis);

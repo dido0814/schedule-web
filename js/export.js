@@ -450,10 +450,12 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
   }
 
   function buildDocx(projectName, items, ganttCanvas) {
-    const lines = Core.generateFullText(projectName, items);
+    const rep = Core.generateReport(projectName, items);
     const images = [];
     let body = "";
-    const run = (t, opt) => `<w:r>${opt && opt.bold ? "<w:rPr><w:b/></w:rPr>" : ""}<w:t xml:space="preserve">${esc(t)}</w:t></w:r>`;
+    // opt.edit：制式文字、需依個案修改 → 紅字
+    const run = (t, opt) => `<w:r>${opt && (opt.bold || opt.edit) ? `<w:rPr>${opt.bold ? "<w:b/>" : ""}${opt.edit ? '<w:color w:val="C00000"/>' : ""}</w:rPr>` : ""}<w:t xml:space="preserve">${esc(t)}</w:t></w:r>`;
+    const runs = (list) => list.map((r) => run(r.t, r)).join("");
     const para = (runs, style, center) =>
       `<w:p><w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ""}<w:spacing w:after="120"/>${center ? '<w:jc w:val="center"/>' : ""}</w:pPr>${runs}</w:p>`;
     const image = (canvas) => {
@@ -471,13 +473,17 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
     };
 
     body += para(run(`${projectName} 工程預定進度說明`), "Heading1", true);
-    body += para(run("一、工期概述"), "Heading2");
-    body += para(run(lines[0]));
-    body += para(run("二、各工作項目工期"), "Heading2");
-    lines.slice(1).forEach((l) => (body += para(run(l))));
-    body += para(run("三、施工預定進度表"), "Heading2");
+    body += para(run("（紅字為制式文字，請依個案修改後改回黑色）", { edit: true }));
+    body += para(run("一、施工期程規劃"), "Heading2");
+    body += para(runs(rep.intro));
+    if (rep.stages.length) {
+      body += para(run("各階段施工安排如下："));
+      rep.stages.forEach((st) => (body += para(runs(st))));
+    }
+    body += para(runs(rep.closing));
+    body += para(run("二、施工預定進度圖"), "Heading2");
     body += image(ganttCanvas);
-    body += para(run("表○○　施工預定進度表"), null, true);
+    body += para(run("圖", {}) + run("○○", { edit: true }) + run("　施工預定進度圖"), null, true);
 
     const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
