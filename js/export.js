@@ -354,7 +354,7 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
     return out;
   }
 
-  function buildDocx(projectName, items, ganttCanvas, pdmCanvas) {
+  function buildDocx(projectName, items, ganttCanvas) {
     const lines = Core.generateFullText(projectName, items);
     const valid = items.filter((it) => it.name);
     const hasCpm = valid.length > 0 && valid.every((it) => "is_critical" in it);
@@ -383,8 +383,7 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
     body += para(run("二、施工排程說明"), "Heading2");
     lines.forEach((l, i) => (body += para(run(l, { bold: i === 0 }))));
     if (hasCpm) {
-      body += para(run("三、要徑網圖（PDM 前置作業法）"), "Heading2");
-      body += image(pdmCanvas);
+      body += para(run("三、要徑分析"), "Heading2");
       const crit = valid.filter((it) => it.is_critical).map((it) => it.name);
       if (crit.length) body += para(run("要徑（總浮時=0，任一項目延誤都會拖延總工期）：", { bold: true }) + run(crit.join("　→　")));
       const nc = valid.filter((it) => !it.is_critical && (it.total_float || 0) > 0);

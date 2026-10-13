@@ -110,7 +110,6 @@
       <button class="btn primary" id="btnExcel">匯出 Excel</button>
       <button class="btn primary" id="btnWord">匯出 Word（甘特圖＋文字說明）</button>
       <button class="btn" id="btnPng">下載甘特圖 PNG</button>
-      <button class="btn" id="btnPdmPng">下載網圖 PNG</button>
     </div>
     <div class="hint">直接在表格裡修改，會自動計算並儲存。資料存在你這台電腦的瀏覽器裡；要給同仁或換電腦，請用右上角「匯出專案檔／匯入專案檔」。</div>
   </section>
@@ -143,14 +142,10 @@
 
   <section class="card">
     <h2>甘特圖預覽 <span class="sub">紅色＝要徑、淺藍＝一般路徑、灰色＝浮時、虛線＝累積進度曲線</span></h2>
+    <div id="critPath"></div>
     <div class="chart" id="gantt"></div>
   </section>
 
-  <section class="card">
-    <h2>要徑網圖（PDM 前置作業法）</h2>
-    <div id="critPath"></div>
-    <div class="chart" id="pdm"></div>
-  </section>
 </main>
 <footer>工程進度排程系統（網頁版）・ 所有計算都在你的瀏覽器內完成，不會上傳資料</footer>
 <div id="toast"></div>

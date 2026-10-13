@@ -189,9 +189,7 @@
   function drawCharts() {
     const p = project();
     const g = Charts.renderGantt(scheduled, p.name);
-    const d = Charts.renderPdm(scheduled, p.name);
     $("#gantt").replaceChildren(g);
-    $("#pdm").replaceChildren(d);
   }
 
   function toast(msg) {
@@ -298,16 +296,12 @@
     $("#btnWord").addEventListener("click", () => {
       const p = project();
       if (!scheduled.length) return toast("請先新增工作項目");
-      const g = Charts.renderGantt(scheduled, p.name), d = Charts.renderPdm(scheduled, p.name);
-      Exporter.download(Exporter.buildDocx(p.name, scheduled, g, d), `${safeName(p.name)}_工程預定進度說明.docx`);
+      const g = Charts.renderGantt(scheduled, p.name);
+      Exporter.download(Exporter.buildDocx(p.name, scheduled, g), `${safeName(p.name)}_工程預定進度說明.docx`);
     });
     $("#btnPng").addEventListener("click", () => {
       const p = project();
       Charts.renderGantt(scheduled, p.name).toBlob((b) => Exporter.download(b, `${safeName(p.name)}_甘特圖.png`));
-    });
-    $("#btnPdmPng").addEventListener("click", () => {
-      const p = project();
-      Charts.renderPdm(scheduled, p.name).toBlob((b) => Exporter.download(b, `${safeName(p.name)}_要徑網圖.png`));
     });
 
     $("#btnExportJson").addEventListener("click", () => {
