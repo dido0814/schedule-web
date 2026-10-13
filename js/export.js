@@ -473,17 +473,20 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
     };
 
     body += para(run(`${projectName} 工程預定進度說明`), "Heading1", true);
-    body += para(run("一、預定進度表"), "Heading2");
-    body += image(ganttCanvas);
-    body += para(run("二、施工排程說明"), "Heading2");
-    lines.forEach((l, i) => (body += para(run(l, { bold: i === 0 }))));
-    if (hasCpm) {
-      body += para(run("三、要徑分析"), "Heading2");
-      const crit = valid.filter((it) => it.is_critical).map((it) => it.name);
-      if (crit.length) body += para(run("要徑（總浮時=0，任一項目延誤都會拖延總工期）：", { bold: true }) + run(crit.join("　→　")));
-      const nc = valid.filter((it) => !it.is_critical && (it.total_float || 0) > 0);
-      if (nc.length) body += para(run(`非要徑項目浮時：${nc.map((it) => `${it.name}尚有 ${it.total_float} 日曆天浮時`).join("；")}。`));
+    body += para(run("一、工期概述"), "Heading2");
+    body += para(run(lines[0]));
+    body += para(run("二、各工作項目工期"), "Heading2");
+    lines.slice(1).forEach((l) => (body += para(run(l))));
+    let no = "三";
+    const critText = hasCpm ? Core.generateCriticalText(valid) : "";
+    if (critText) {
+      body += para(run("三、要徑說明"), "Heading2");
+      body += para(run(critText));
+      no = "四";
     }
+    body += para(run(`${no}、施工預定進度表`), "Heading2");
+    body += image(ganttCanvas);
+    body += para(run("表○○　施工預定進度表"), null, true);
 
     const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"

@@ -266,10 +266,22 @@
   }
 
   // ───────────────────────── 文字說明（text_generator.py） ─────────────────────────
+  // 主要工作項目：取最上層工項，去掉括號補充與字尾「工程」，組成「道路、排水…等工程」
+  function mainWorkNames(items) {
+    const names = [];
+    for (const it of items) {
+      if (!it.name || it.milestone || (it.level || 0) > 0) continue;
+      const n = it.name.replace(/[(（][^)）]*[)）]/g, "").replace(/工程$/, "").trim();
+      if (n && !names.includes(n)) names.push(n);
+    }
+    return names;
+  }
+
   function generateIntro(projectName, items) {
     const total = items.filter((it) => it.name).reduce((m, it) => Math.max(m, it.end_day || 0), 0);
-    const count = items.filter((it) => it.name && !it.milestone).length;
-    return `${projectName}總工期預計${total}日曆天，工作項目共${count}項，各工作項目施工排程概述如下：`;
+    const names = mainWorkNames(items);
+    const months = Math.max(Math.ceil(total / 30), 1);
+    return `${projectName}之主要工作項目包括${names.join("、")}等工程，整體工期可於${total}日曆天（約${months}個月）內完成，施工預定進度表詳表○○所示。`;
   }
 
   function generateItemParagraph(item) {
@@ -279,27 +291,27 @@
     const section = item.section || "";
     const start = item.start_day, end = item.end_day;
     const duration = start && end ? end - start + 1 : item.duration;
-    const note = (item.note || "").trim();
-    const preds = item._valid_predecessors || [];
-    const lag = parseInt(item.lag, 10) || 0;
+    const note = (item.note || "").trim().replace(/[。.]+$/, "");
     const loc = section ? `（${section}）` : "";
-    let timing;
-    if (preds.length) {
-      const pp = preds.length === 1 ? `「${preds[0]}」` : preds.map((p) => `「${p}」`).join("、") + " 全部";
-      timing = lag > 0
-        ? `配合${pp}完成後，間隔${lag}日曆天起，於第${start}日開始施工`
-        : `配合${pp}完成後接續施作，於第${start}日開始施工`;
-    } else {
-      timing = `自第${start}日開工日起施工`;
-    }
-    let s = `${name}${loc}：${timing}，工期${duration}日曆天，預計於第${end}日完成。`;
-    if (note) s += `施工時應注意${note}。`;
+    let s = `${name}${loc}：工期${duration}日曆天（第${start}～${end}日）`;
+    s += note ? `；${note}。` : "。";
     return s;
   }
 
   function generateFullText(projectName, items) {
     const valid = items.filter((it) => it.name);
     return [generateIntro(projectName, valid)].concat(valid.map(generateItemParagraph));
+  }
+
+  // 要徑說明（精簡成一段）
+  function generateCriticalText(items) {
+    const valid = items.filter((it) => it.name && !it.milestone);
+    const crit = valid.filter((it) => it.is_critical).map((it) => it.name);
+    if (!crit.length) return "";
+    let s = `本計畫要徑為「${crit.join("→")}」，上述工項任一延誤均將影響總工期，應優先管控`;
+    const nc = valid.filter((it) => !it.is_critical && (it.total_float || 0) > 0);
+    s += nc.length ? `；其餘工項尚有浮時（${nc.map((it) => `${it.name}${it.total_float}日曆天`).join("、")}），可彈性調度。` : "。";
+    return s;
   }
 
   // ───────────────────────── 範本（templates_lib.py） ─────────────────────────
@@ -334,7 +346,7 @@
     CATEGORY_COLORS, CATEGORY_ORDER, colorFor,
     isMilestone, computeSchedule, computeCriticalPath, bindingPredecessors,
     effectiveParent, computeNumbering, moveItem, indentItem, outdentItem,
-    getScheduledItems, totalDuration, generateFullText, getTemplate, listTemplates,
+    getScheduledItems, totalDuration, generateFullText, generateCriticalText, getTemplate, listTemplates,
     parseAmount, itemAmount, totalAmount, formatAmount, cumulativePercent,
   };
 })(typeof window !== "undefined" ? window : globalThis);
