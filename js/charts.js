@@ -101,7 +101,7 @@
     // 標題
     text(ctx, `${projectName}　工程預定進度表`, x0, pad + 18, { size: 18, bold: true });
     const amountTotal = empty ? 0 : Core.totalAmount(valid);
-    if (amountTotal > 0) text(ctx, `總金額：${Core.formatAmount(amountTotal)} 元`, gxEnd, pad + 20, { size: 13, bold: true, align: "right" });
+    if (amountTotal > 0) text(ctx, `總工程費：${Core.formatAmount(amountTotal)} 元`, gxEnd, pad + 20, { size: 13, bold: true, align: "right" });
 
     // 表頭
     rect(ctx, x0, rowY(0), gxEnd - x0, rowH, C.headerGreen);

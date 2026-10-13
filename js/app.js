@@ -197,7 +197,7 @@
     const pn = $("#projectName");
     if (document.activeElement !== pn) pn.value = p.name;
     $("#totalBadge").textContent = `總工期：${total} 日曆天`;
-    $("#amountBadge").textContent = `總金額：${Core.formatAmount(Core.totalAmount(scheduled))} 元`;
+    $("#amountBadge").textContent = `總工程費：${Core.formatAmount(Core.totalAmount(scheduled))} 元`;
     $("#itemCount").textContent = `${p.items.length} 項`;
 
     // 表格
