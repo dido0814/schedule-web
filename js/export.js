@@ -316,7 +316,8 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
       ws.set(foot, col + 2, t, { font: font(10), align: { h: "left", v: "center", indent: 1 } });
       col += 8;
     }
-    ws.set(foot, last, `總工期：${total} 日曆天`, { font: font(12, true), align: { h: "right", v: "center" } });
+    const amountTotal = Core.totalAmount(valid);
+    ws.set(foot, last, `總工期：${total} 日曆天${amountTotal > 0 ? `　總金額：${Core.formatAmount(amountTotal)} 元` : ""}`, { font: font(12, true), align: { h: "right", v: "center" } });
     ws.rows[foot] = 22;
 
     const sheets = [ws];

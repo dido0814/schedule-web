@@ -43,7 +43,7 @@
   }
 
   // ─────────────────────────── 甘特圖 ───────────────────────────
-  const MONTH_DAYS = 30;
+  const TICK_DAYS = 10; // 上方工期刻度：每 10 天一格
 
   function buildRows(items) {
     const rows = [];
@@ -63,9 +63,9 @@
     if (empty) valid = [{ name: "(尚未輸入工作項目)", start_day: 1, end_day: 1 }];
     const hasCpm = !empty && valid.every((it) => "is_critical" in it);
 
-    const totalDays = Math.max(valid.reduce((m, it) => Math.max(m, it.end_day || 0), 0), MONTH_DAYS);
-    const nMonths = Math.ceil(totalDays / MONTH_DAYS);
-    const axisMax = nMonths * MONTH_DAYS;
+    const totalDays = Math.max(valid.reduce((m, it) => Math.max(m, it.end_day || 0), 0), 30);
+    const nMonths = Math.ceil(totalDays / TICK_DAYS);
+    const axisMax = nMonths * TICK_DAYS;
     const rows = buildRows(valid);
 
     // 量測工作項目欄寬
@@ -83,7 +83,7 @@
     nameW = Math.min(nameW, 420);
     const colNo = 56, colDur = 70;
     const labelW = colNo + nameW + colDur;
-    const dayPx = Math.max(2.2, Math.min(6, 1150 / axisMax));
+    const dayPx = Math.max(2.6, Math.min(6, 1150 / axisMax));
     const chartW = axisMax * dayPx;
     const rowH = 30;
     const pad = 20, titleH = 46, legendH = 46;
@@ -100,6 +100,8 @@
 
     // 標題
     text(ctx, `${projectName}　工程預定進度表`, x0, pad + 18, { size: 18, bold: true });
+    const amountTotal = empty ? 0 : Core.totalAmount(valid);
+    if (amountTotal > 0) text(ctx, `總金額：${Core.formatAmount(amountTotal)} 元`, gxEnd, pad + 20, { size: 13, bold: true, align: "right" });
 
     // 表頭
     rect(ctx, x0, rowY(0), gxEnd - x0, rowH, C.headerGreen);
@@ -107,9 +109,9 @@
     text(ctx, "項次", (x0 + col1) / 2, hy, { size: 13, bold: true, color: C.headerText, align: "center" });
     text(ctx, "工作項目", (col1 + col2) / 2, hy, { size: 13, bold: true, color: C.headerText, align: "center" });
     text(ctx, "工期(日)", (col2 + gx) / 2, hy, { size: 12.5, bold: true, color: C.headerText, align: "center" });
-    text(ctx, "月次", (gx + gxEnd) / 2, rowY(0) + rowH * 0.27, { size: 11, bold: true, color: C.headerText, align: "center" });
+    text(ctx, "工期（日曆天）", (gx + gxEnd) / 2, rowY(0) + rowH * 0.27, { size: 11, bold: true, color: C.headerText, align: "center" });
     for (let m = 0; m < nMonths; m++) {
-      text(ctx, String(m + 1), dayX(m * MONTH_DAYS + MONTH_DAYS / 2), rowY(0) + rowH * 0.75,
+      text(ctx, String((m + 1) * TICK_DAYS), dayX(m * TICK_DAYS + TICK_DAYS / 2), rowY(0) + rowH * 0.75,
         { size: 11, bold: true, color: C.headerText, align: "center" });
     }
     line(ctx, gx, hy, gxEnd, hy, "#ffffff", 0.8);
@@ -148,24 +150,15 @@
     const cumR = rows.length + 1, cumY = rowY(cumR), cumCy = cumY + rowH / 2;
     rect(ctx, x0, cumY, gxEnd - x0, rowH, C.headerGreen);
     text(ctx, "預定進度累積百分比(%)", (x0 + col2) / 2, cumCy, { size: 12, bold: true, color: C.headerText, align: "center" });
-    const tasks = empty ? [] : valid.filter((it) => !it.milestone);
-    const totalWork = tasks.reduce((s, it) => s + Math.max(it.end_day - it.start_day + 1, 0), 0) || 1;
-    const cumPct = (day) => {
-      let done = 0;
-      for (const it of tasks) {
-        const d = it.end_day - it.start_day + 1;
-        done += Math.min(Math.max(day - (it.start_day - 1), 0), d);
-      }
-      return (100 * done) / totalWork;
-    };
+    const cumPct = empty ? () => 0 : Core.cumulativePercent(valid);
     for (let m = 0; m < nMonths; m++) {
-      text(ctx, cumPct((m + 1) * MONTH_DAYS).toFixed(0), dayX(m * MONTH_DAYS + MONTH_DAYS / 2), cumCy,
+      text(ctx, cumPct((m + 1) * TICK_DAYS).toFixed(0), dayX(m * TICK_DAYS + TICK_DAYS / 2), cumCy,
         { size: 11.5, bold: true, color: C.headerText, align: "center" });
     }
 
     // 格線
     const tTop = rowY(0), tBot = rowY(nRowsTotal);
-    for (let m = 1; m < nMonths; m++) line(ctx, dayX(m * MONTH_DAYS), tTop, dayX(m * MONTH_DAYS), tBot, C.grid, 0.6);
+    for (let m = 1; m < nMonths; m++) line(ctx, dayX(m * TICK_DAYS), tTop, dayX(m * TICK_DAYS), tBot, C.grid, 0.6);
     for (let r = 1; r < nRowsTotal; r++) line(ctx, x0, rowY(r), gxEnd, rowY(r), C.grid, 0.6);
     for (const vx of [col1, col2, gx]) line(ctx, vx, tTop, vx, tBot, "#888888", 0.8);
     rect(ctx, x0, tTop, gxEnd - x0, tBot - tTop, null, "#333333", 1.2);

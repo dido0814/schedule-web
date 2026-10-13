@@ -236,6 +236,35 @@
     return items.reduce((m, it) => Math.max(m, it.end_day || 0), 0);
   }
 
+  // ───────────────────────── 金額 / 累積進度 ─────────────────────────
+  function parseAmount(v) {
+    const n = parseFloat(String(v == null ? "" : v).replace(/[,，\s]/g, ""));
+    return isFinite(n) && n > 0 ? n : 0;
+  }
+  function itemAmount(item) { return isMilestone(item) ? 0 : parseAmount(item.amount); }
+  function totalAmount(items) {
+    return items.reduce((s, it) => s + (it.name ? itemAmount(it) : 0), 0);
+  }
+  function formatAmount(n) { return Math.round(n).toLocaleString("en-US"); }
+
+  // 回傳 day → 累積進度(%)。有填金額時，每個工項的金額平均分攤到工期的每一天；
+  // 全部都沒填金額時，退回以工期為權重。
+  function cumulativePercent(items) {
+    const tasks = items.filter((it) => it.name && !isMilestone(it) && it.end_day - it.start_day + 1 > 0);
+    const useAmount = totalAmount(tasks) > 0;
+    const dur = (it) => it.end_day - it.start_day + 1;
+    const weight = (it) => (useAmount ? itemAmount(it) : dur(it));
+    const total = tasks.reduce((s, it) => s + weight(it), 0) || 1;
+    return (day) => {
+      let done = 0;
+      for (const it of tasks) {
+        const d = dur(it);
+        done += (weight(it) * Math.min(Math.max(day - (it.start_day - 1), 0), d)) / d;
+      }
+      return (100 * done) / total;
+    };
+  }
+
   // ───────────────────────── 文字說明（text_generator.py） ─────────────────────────
   function generateIntro(projectName, items) {
     const total = items.filter((it) => it.name).reduce((m, it) => Math.max(m, it.end_day || 0), 0);
@@ -305,5 +334,6 @@
     isMilestone, computeSchedule, computeCriticalPath, bindingPredecessors,
     effectiveParent, computeNumbering, moveItem, indentItem, outdentItem,
     getScheduledItems, totalDuration, generateFullText, getTemplate, listTemplates,
+    parseAmount, itemAmount, totalAmount, formatAmount, cumulativePercent,
   };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -38,7 +38,7 @@
   .muted { color:var(--muted); }
   .hint { color:var(--muted); font-size:12.5px; margin-top:8px; }
   .tablewrap { overflow-x:auto; }
-  table { border-collapse:collapse; width:100%; min-width:1280px; font-size:13px; }
+  table { border-collapse:collapse; width:100%; min-width:1400px; font-size:13px; }
   th, td { border:1px solid var(--line); padding:4px 5px; vertical-align:middle; }
   th { background:var(--head); font-weight:bold; text-align:center; position:sticky; top:0; }
   th small { display:block; font-weight:normal; color:var(--muted); font-size:11px; }
@@ -55,6 +55,7 @@
   .tree { color:#a0aec0; }
   td.dur { white-space:nowrap; }
   td.dur input[type=number] { width:64px; }
+  td.amt input { text-align:right; }
   .ms { color:#1f3864; font-weight:bold; padding:0 4px; }
   .ms-toggle { font-size:11px; color:var(--muted); display:inline-flex; align-items:center; gap:2px; cursor:pointer; }
   .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:3px; vertical-align:middle; }
@@ -103,6 +104,7 @@
     <div class="toolbar">
       <div class="name-field"><span>計畫名稱</span><input id="projectName"></div>
       <span class="badge" id="totalBadge">總工期：0 日曆天</span>
+      <span class="badge" id="amountBadge">總金額：0 元</span>
       <span class="badge light" id="itemCount"></span>
     </div>
     <div class="toolbar">
@@ -137,6 +139,7 @@
           <th style="width:150px">上層工項<small>選了就變子項目</small></th>
           <th style="width:120px">階段<small>甘特圖分隔列</small></th>
           <th style="width:150px">工期(日)</th>
+          <th style="width:120px">金額(元)<small>算累積進度用</small></th>
           <th style="width:165px">分類</th>
           <th style="width:200px">前置工項<small>可複選</small></th>
           <th style="width:64px">間隔(日)</th>
@@ -148,6 +151,7 @@
         <tbody id="itemsBody"></tbody>
       </table>
     </div>
+    <div class="hint">累積進度百分比：有填金額時依金額計算，每個工項的金額平均分攤到它工期的每一天；全部都沒填金額時，改依工期計算。上層工項和它的子項目若都填金額會重複計入，請只填其中一邊。</div>
     <div id="emptyHint" hidden>還沒有工作項目，可以按上方「一鍵帶入道路工程標準範本」，或在最下列直接新增。</div>
   </section>
 
@@ -161,9 +165,9 @@
 <footer>工程進度排程系統（網頁版）・ 所有計算都在你的瀏覽器內完成，不會上傳資料</footer>
 <div id="toast"></div>
 
-<script src="js/core.js?v=3"></script>
-<script src="js/charts.js?v=3"></script>
-<script src="js/export.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/core.js?v=4"></script>
+<script src="js/charts.js?v=4"></script>
+<script src="js/export.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
 </body>
 </html>

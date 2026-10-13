@@ -55,6 +55,7 @@
     }
     if (field === "duration") value = Math.max(parseInt(value, 10) || 1, 1);
     if (field === "lag") value = Math.max(parseInt(value, 10) || 0, 0);
+    if (field === "amount") value = Core.parseAmount(value);
     if (field === "milestone") value = !!value;
     if (typeof value === "string") value = value.trim();
     it[field] = value;
@@ -63,7 +64,7 @@
 
   function addItem(form) {
     const el = (n) => form.elements.namedItem(n);
-    form = { name: el("name"), parent: el("parent"), stage: el("stage"), duration: el("duration"), milestone: el("milestone"),
+    form = { name: el("name"), parent: el("parent"), stage: el("stage"), duration: el("duration"), milestone: el("milestone"), amount: el("amount"),
       category: el("category"), lag: el("lag"), note: el("note"),
       preds: [...form.elements].filter((x) => x.name === "pred" && x.checked).map((x) => x.value) };
     const name = form.name.value.trim();
@@ -78,6 +79,7 @@
       stage: form.stage.value.trim(),
       duration: Math.max(parseInt(form.duration.value, 10) || 1, 1),
       milestone: form.milestone.checked,
+      amount: Core.parseAmount(form.amount.value),
       category: form.category.value,
       predecessors: form.preds,
       lag: Math.max(parseInt(form.lag.value, 10) || 0, 0),
@@ -195,6 +197,7 @@
     const pn = $("#projectName");
     if (document.activeElement !== pn) pn.value = p.name;
     $("#totalBadge").textContent = `總工期：${total} 日曆天`;
+    $("#amountBadge").textContent = `總金額：${Core.formatAmount(Core.totalAmount(scheduled))} 元`;
     $("#itemCount").textContent = `${p.items.length} 項`;
 
     // 表格
@@ -211,6 +214,7 @@
         <td><input data-f="stage" value="${h(it.stage)}" placeholder="選填"></td>
         <td class="dur">${it.milestone ? '<span class="ms">◆ 里程碑</span>' : `<input type="number" min="1" data-f="duration" value="${h(it.duration)}">`}
           <label class="ms-toggle" title="設為里程碑（工期 0）"><input type="checkbox" data-f="milestone" ${it.milestone ? "checked" : ""}>里程碑</label></td>
+        <td class="amt">${it.milestone ? '<div class="muted" style="text-align:center">-</div>' : `<input data-f="amount" inputmode="numeric" value="${Core.itemAmount(it) ? Core.formatAmount(Core.itemAmount(it)) : ""}" placeholder="選填">`}</td>
         <td><span class="swatch" style="background:${Core.colorFor(it.category)}"></span><select data-f="category">${options(Core.CATEGORY_ORDER, it.category || "", "（未分類）")}</select></td>
         <td>${predPicker(it.predecessors, it.name, names, it.id)}${missing}</td>
         <td><input type="number" min="0" data-f="lag" value="${h(it.lag || 0)}"></td>
@@ -225,6 +229,7 @@
       <td><input name="stage" form="addForm" placeholder="選填"></td>
       <td class="dur"><input type="number" min="1" name="duration" form="addForm" value="30">
         <label class="ms-toggle"><input type="checkbox" name="milestone" form="addForm">里程碑</label></td>
+      <td class="amt"><input name="amount" form="addForm" inputmode="numeric" placeholder="選填"></td>
       <td><select name="category" form="addForm">${options(Core.CATEGORY_ORDER, "", "（未分類）")}</select></td>
       <td id="addPred">${predPicker([], null, names, null)}</td>
       <td><input type="number" min="0" name="lag" form="addForm" value="0"></td>
