@@ -56,7 +56,6 @@
     if (field === "duration") value = Math.max(parseInt(value, 10) || 1, 1);
     if (field === "lag") value = Math.max(parseInt(value, 10) || 0, 0);
     if (field === "amount") value = Core.parseAmount(value);
-    if (field === "milestone") value = !!value;
     if (typeof value === "string") value = value.trim();
     it[field] = value;
     commit();
@@ -64,7 +63,7 @@
 
   function addItem(form) {
     const el = (n) => form.elements.namedItem(n);
-    form = { name: el("name"), parent: el("parent"), stage: el("stage"), duration: el("duration"), milestone: el("milestone"), amount: el("amount"),
+    form = { name: el("name"), parent: el("parent"), duration: el("duration"), amount: el("amount"),
       category: el("category"), lag: el("lag"), note: el("note"),
       preds: [...form.elements].filter((x) => x.name === "pred" && x.checked).map((x) => x.value) };
     const name = form.name.value.trim();
@@ -76,9 +75,7 @@
       name,
       section: "",
       parent: form.parent.value,
-      stage: form.stage.value.trim(),
       duration: Math.max(parseInt(form.duration.value, 10) || 1, 1),
-      milestone: form.milestone.checked,
       amount: Core.parseAmount(form.amount.value),
       category: form.category.value,
       predecessors: form.preds,
@@ -120,9 +117,9 @@
     for (const id of ids) {
       const s = siblingsOf(items, id);
       // 上層也被勾選時，子項目跟著上層走，不另外處理
-      if (!s || s.target.milestone || (s.parent && selected.has(s.parent.id))) continue;
+      if (!s || (s.parent && selected.has(s.parent.id))) continue;
       let i = s.idx - 1;
-      while (i >= 0 && (selected.has(s.sibs[i].id) || s.sibs[i].milestone)) i--;
+      while (i >= 0 && selected.has(s.sibs[i].id)) i--;
       if (i >= 0) plan.push([s.target, s.sibs[i].name]);
     }
     plan.forEach(([it, name]) => { it.parent = name; });
@@ -212,14 +209,12 @@
         <td class="name-cell" style="padding-left:${6 + (it.level || 0) * 18}px">
           <div class="nc">${it.level ? '<span class="tree">└</span>' : ""}<input data-f="name" value="${h(it.name)}"></div></td>
         <td><select data-f="parent">${options(names.filter((n) => n !== it.name), it.parent || "", "（最上層）")}</select></td>
-        <td><input data-f="stage" value="${h(it.stage)}" placeholder="選填"></td>
-        <td class="dur">${it.milestone ? '<span class="ms">◆ 里程碑</span>' : `<input type="number" min="1" data-f="duration" value="${h(it.duration)}">`}
-          <label class="ms-toggle" title="設為里程碑（工期 0）"><input type="checkbox" data-f="milestone" ${it.milestone ? "checked" : ""}>里程碑</label></td>
-        <td class="amt">${it.milestone ? '<div class="muted" style="text-align:center">-</div>' : `<input data-f="amount" inputmode="numeric" value="${Core.itemAmount(it) ? Core.formatAmount(Core.itemAmount(it)) : ""}" placeholder="選填">`}</td>
+        <td><input type="number" min="1" data-f="duration" value="${h(it.duration)}"></td>
+        <td class="amt"><input data-f="amount" inputmode="numeric" value="${Core.itemAmount(it) ? Core.formatAmount(Core.itemAmount(it)) : ""}" placeholder="選填"></td>
         <td><span class="swatch" style="background:${Core.colorFor(it.category)}"></span><select data-f="category">${options(Core.CATEGORY_ORDER, it.category || "", "（未分類）")}</select></td>
         <td>${predPicker(it.predecessors, it.name, names, it.id)}${missing}</td>
-        <td><input type="number" min="0" data-f="lag" value="${h(it.lag || 0)}"></td>
         <td><input data-f="note" value="${h(it.note)}" placeholder="施工注意事項（帶入 Word 說明）"></td>
+        <td><input type="number" min="0" data-f="lag" value="${h(it.lag || 0)}"></td>
         <td class="day">${it.start_day}</td><td class="day">${it.end_day}</td>
         <td class="day ${it.is_critical ? "tf0" : ""}">${it.is_critical ? "要徑" : tf}</td></tr>`;
     }).join("");
@@ -227,14 +222,12 @@
     const addRow = `<tr id="addRow"><td></td><td class="num muted">新增</td>
       <td><input name="name" form="addForm" placeholder="新工作項目名稱"></td>
       <td><select name="parent" form="addForm">${options(names, "", "（最上層）")}</select></td>
-      <td><input name="stage" form="addForm" placeholder="選填"></td>
-      <td class="dur"><input type="number" min="1" name="duration" form="addForm" value="30">
-        <label class="ms-toggle"><input type="checkbox" name="milestone" form="addForm">里程碑</label></td>
+      <td><input type="number" min="1" name="duration" form="addForm" value="30"></td>
       <td class="amt"><input name="amount" form="addForm" inputmode="numeric" placeholder="選填"></td>
       <td><select name="category" form="addForm">${options(Core.CATEGORY_ORDER, "", "（未分類）")}</select></td>
       <td id="addPred">${predPicker([], null, names, null)}</td>
-      <td><input type="number" min="0" name="lag" form="addForm" value="0"></td>
       <td><input name="note" form="addForm" placeholder="選填"></td>
+      <td><input type="number" min="0" name="lag" form="addForm" value="0"></td>
       <td colspan="3" style="text-align:center"><button type="submit" form="addForm" class="btn primary sm">＋ 新增</button></td></tr>`;
     $("#itemsBody").innerHTML = rows + addRow;
     // details 裡的 checkbox 需要掛到 addForm

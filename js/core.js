@@ -21,7 +21,8 @@
   }
 
   // ───────────────────────── 排程（scheduling.py） ─────────────────────────
-  function isMilestone(item) { return !!item.milestone; }
+  // 里程碑功能已取消，舊資料的 milestone 設定一律不採用
+  function isMilestone() { return false; }
 
   function itemDuration(item) {
     if (isMilestone(item)) return 0;
@@ -226,7 +227,8 @@
 
   // ───────────────────────── 整合：算出顯示用清單 ─────────────────────────
   function getScheduledItems(project) {
-    const copy = project.items.map((it) => Object.assign({}, it));
+    // 里程碑與階段功能已取消：舊專案檔裡殘留的設定一律忽略，里程碑當成一般工項
+    const copy = project.items.map((it) => Object.assign({}, it, { milestone: false, stage: "" }));
     computeSchedule(copy);
     computeCriticalPath(copy);
     return computeNumbering(copy);
