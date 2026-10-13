@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工程進度排程系統</title>
+<style>
+  :root {
+    --bg:#f3f4f6; --card:#fff; --ink:#1b2430; --muted:#6b7480; --line:#dde1e6; --head:#eef2f7;
+    --accent:#1f5fae; --accent-ink:#fff; --green:#2f7d3a; --red:#c0392b; --crit-bg:#fff5f4;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 "Microsoft JhengHei","微軟正黑體","Noto Sans TC",system-ui,sans-serif; }
+  header { background:#1b2a41; color:#fff; padding:12px 20px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; position:sticky; top:0; z-index:20; }
+  header h1 { font-size:17px; margin:0 12px 0 0; letter-spacing:.5px; }
+  header .grow { flex:1; }
+  header select { min-width:220px; padding:6px 8px; border-radius:6px; border:1px solid #42546f; background:#24364f; color:#fff; font:inherit; }
+  header .btn { background:#2c4060; color:#fff; border-color:#42546f; }
+  header .btn:hover { background:#36507a; }
+  main { padding:18px 20px 60px; max-width:1800px; margin:0 auto; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:16px; }
+  .card h2 { font-size:16px; margin:0 0 12px; display:flex; align-items:center; gap:10px; }
+  .card h2 .sub { font-weight:normal; color:var(--muted); font-size:13px; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .toolbar + .toolbar { margin-top:12px; }
+  .sep { width:1px; height:24px; background:var(--line); margin:0 4px; }
+  .btn { font:inherit; padding:6px 13px; border-radius:6px; border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; white-space:nowrap; }
+  .btn:hover { background:#f2f4f7; }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn.primary:hover { filter:brightness(1.1); }
+  .btn.green { background:var(--green); color:#fff; border-color:var(--green); }
+  .btn.danger { color:var(--red); border-color:#e7b8b3; }
+  .btn.sm { padding:4px 10px; font-size:13px; }
+  .name-field { display:flex; align-items:center; gap:8px; }
+  .name-field input { font:inherit; font-size:16px; font-weight:bold; padding:5px 10px; width:300px; border:1px solid var(--line); border-radius:6px; }
+  .badge { background:var(--accent); color:#fff; padding:4px 12px; border-radius:14px; font-size:13px; }
+  .badge.light { background:#e8eef7; color:var(--accent); }
+  .muted { color:var(--muted); }
+  .hint { color:var(--muted); font-size:12.5px; margin-top:8px; }
+  .tablewrap { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; min-width:1380px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:4px 5px; vertical-align:middle; }
+  th { background:var(--head); font-weight:bold; text-align:center; position:sticky; top:0; }
+  th small { display:block; font-weight:normal; color:var(--muted); font-size:11px; }
+  td input:not([type=checkbox]), td select { width:100%; font:inherit; font-size:13px; padding:3px 5px; border:1px solid transparent; border-radius:4px; background:transparent; }
+  td input:not([type=checkbox]):hover, td select:hover { border-color:var(--line); background:#fff; }
+  td input:not([type=checkbox]):focus, td select:focus { border-color:var(--accent); background:#fff; outline:none; }
+  #addRow { background:#f8fafc; }
+  #addRow input:not([type=checkbox]), #addRow select { border-color:var(--line); background:#fff; }
+  tr.crit td.num { color:var(--red); }
+  td.num { text-align:center; font-weight:bold; color:var(--accent); white-space:nowrap; }
+  td.day { text-align:center; white-space:nowrap; }
+  td.tf0 { color:var(--red); font-weight:bold; }
+  .nc { display:flex; align-items:center; gap:2px; }
+  .tree { color:#a0aec0; }
+  td.dur { white-space:nowrap; }
+  td.dur input[type=number] { width:64px; }
+  .ms { color:#1f3864; font-weight:bold; padding:0 4px; }
+  .ms-toggle { font-size:11px; color:var(--muted); display:inline-flex; align-items:center; gap:2px; cursor:pointer; }
+  .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:3px; vertical-align:middle; }
+  td select[data-f=category], #addRow select[name=category] { width:calc(100% - 16px); }
+  td.ops { white-space:nowrap; text-align:center; }
+  td.ops button { font:inherit; font-size:13px; width:26px; height:26px; border:1px solid var(--line); background:#fff; border-radius:4px; cursor:pointer; padding:0; }
+  td.ops button:hover { background:#eef2f7; }
+  td.ops button.del { color:var(--red); }
+  details.pred { position:relative; }
+  details.pred summary { cursor:pointer; list-style:none; padding:3px 6px; border:1px solid var(--line); border-radius:4px; background:#fff; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
+  details.pred summary::after { content:" ▾"; color:var(--muted); }
+  details.pred[open] summary { border-color:var(--accent); }
+  .pred-list { position:absolute; z-index:30; top:100%; left:0; background:#fff; border:1px solid var(--line); border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,.12); padding:6px 8px; min-width:240px; max-height:280px; overflow:auto; }
+  .pred-list label { display:block; padding:3px 2px; white-space:nowrap; cursor:pointer; }
+  .pred-list label:hover { background:#f2f6fb; }
+  .warn { color:var(--red); font-size:11px; }
+  .chart { overflow:auto; border:1px solid var(--line); border-radius:6px; background:#fff; }
+  .chart canvas { display:block; }
+  #gantt canvas { max-width:100%; height:auto !important; }
+  #critPath { color:var(--red); margin-bottom:8px; }
+  #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(80px); background:#1b2a41; color:#fff; padding:10px 18px; border-radius:8px; transition:transform .25s; z-index:50; }
+  #toast.show { transform:translateX(-50%) translateY(0); }
+  #emptyHint { padding:16px; text-align:center; color:var(--muted); }
+  footer { color:var(--muted); font-size:12.5px; text-align:center; padding:8px 16px 30px; }
+  @media (max-width:700px) { main { padding:12px; } .name-field input { width:100%; } header select { min-width:0; width:100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>工程進度排程系統</h1>
+  <label for="projectSelect" class="muted" style="color:#b9c4d4">專案</label>
+  <select id="projectSelect"></select>
+  <button class="btn sm" id="btnNew">＋ 新專案</button>
+  <button class="btn sm" id="btnCopy">複製</button>
+  <button class="btn sm" id="btnDelete">刪除專案</button>
+  <span class="grow"></span>
+  <button class="btn sm" id="btnImportJson" title="開啟同仁分享的 .json 專案檔">匯入專案檔</button>
+  <button class="btn sm" id="btnExportJson" title="備份或分享給同仁">匯出專案檔</button>
+  <input type="file" id="fileInput" accept=".json,application/json" multiple hidden>
+</header>
+
+<main>
+  <section class="card">
+    <div class="toolbar">
+      <div class="name-field"><span>計畫名稱</span><input id="projectName"></div>
+      <span class="badge" id="totalBadge">總工期：0 日曆天</span>
+      <span class="badge light" id="itemCount"></span>
+    </div>
+    <div class="toolbar">
+      <button class="btn green" id="btnTemplate">一鍵帶入「道路工程」標準範本</button>
+      <button class="btn danger" id="btnClear">清空全部工作項目</button>
+      <span class="sep"></span>
+      <button class="btn primary" id="btnExcel">匯出 Excel</button>
+      <button class="btn primary" id="btnWord">匯出 Word（甘特圖＋文字說明）</button>
+      <button class="btn" id="btnPng">下載甘特圖 PNG</button>
+      <button class="btn" id="btnPdmPng">下載網圖 PNG</button>
+    </div>
+    <div class="hint">直接在表格裡修改，會自動計算並儲存。資料存在你這台電腦的瀏覽器裡；要給同仁或換電腦，請用右上角「匯出專案檔／匯入專案檔」。</div>
+  </section>
+
+  <section class="card">
+    <h2>工作項目清單 <span class="sub">編號、起始日、完成日、浮時自動計算</span></h2>
+    <form id="addForm"></form>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th style="width:52px">編號</th>
+          <th style="min-width:200px">工作項目</th>
+          <th style="width:150px">上層工項<small>選了就變子項目</small></th>
+          <th style="width:120px">階段<small>甘特圖分隔列</small></th>
+          <th style="width:150px">工期(日)</th>
+          <th style="width:165px">分類</th>
+          <th style="width:200px">前置工項<small>可複選</small></th>
+          <th style="width:64px">間隔(日)</th>
+          <th style="min-width:180px">施工注意事項</th>
+          <th style="width:52px">起始日</th>
+          <th style="width:52px">完成日</th>
+          <th style="width:52px">浮時</th>
+          <th style="width:150px">操作<small>↑↓排序 ⇤⇥層級</small></th>
+        </tr></thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyHint" hidden>還沒有工作項目，可以按上方「一鍵帶入道路工程標準範本」，或在最下列直接新增。</div>
+  </section>
+
+  <section class="card">
+    <h2>甘特圖預覽 <span class="sub">紅色＝要徑、淺藍＝一般路徑、灰色＝浮時、虛線＝累積進度曲線</span></h2>
+    <div class="chart" id="gantt"></div>
+  </section>
+
+  <section class="card">
+    <h2>要徑網圖（PDM 前置作業法）</h2>
+    <div id="critPath"></div>
+    <div class="chart" id="pdm"></div>
+  </section>
+</main>
+<footer>工程進度排程系統（網頁版）・ 所有計算都在你的瀏覽器內完成，不會上傳資料</footer>
+<div id="toast"></div>
+
+<script src="js/core.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
