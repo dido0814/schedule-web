@@ -38,7 +38,7 @@
   .muted { color:var(--muted); }
   .hint { color:var(--muted); font-size:12.5px; margin-top:8px; }
   .tablewrap { overflow-x:auto; }
-  table { border-collapse:collapse; width:100%; min-width:1220px; font-size:13px; }
+  table { border-collapse:collapse; width:100%; min-width:1060px; font-size:13px; }
   th, td { border:1px solid var(--line); padding:4px 5px; vertical-align:middle; }
   th { background:var(--head); font-weight:bold; text-align:center; position:sticky; top:0; }
   th small { display:block; font-weight:normal; color:var(--muted); font-size:11px; }
@@ -54,8 +54,6 @@
   .nc { display:flex; align-items:center; gap:2px; }
   .tree { color:#a0aec0; }
   td.amt input { text-align:right; }
-  .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:3px; vertical-align:middle; }
-  td select[data-f=category], #addRow select[name=category] { width:calc(100% - 16px); }
   td.selc, th.selc { text-align:center; width:34px; }
   td.selc input, th.selc input { width:16px; height:16px; cursor:pointer; vertical-align:middle; }
   tr.sel td { background:#eef5ff; }
@@ -135,7 +133,6 @@
           <th style="width:150px">上層工項<small>選了就變子項目</small></th>
           <th style="width:76px">工期(日)</th>
           <th style="width:120px">金額(元)<small>算累積進度用</small></th>
-          <th style="width:165px">分類</th>
           <th style="width:200px">前置工項<small>可複選</small></th>
           <th style="min-width:180px">施工注意事項</th>
           <th style="width:64px">間隔(日)<small>前置完成後</small></th>
@@ -161,9 +158,9 @@
 <footer>工程進度排程系統（網頁版）・ 所有計算都在你的瀏覽器內完成，不會上傳資料</footer>
 <div id="toast"></div>
 
-<script src="js/core.js?v=14"></script>
-<script src="js/charts.js?v=14"></script>
-<script src="js/export.js?v=14"></script>
-<script src="js/app.js?v=14"></script>
+<script src="js/core.js?v=15"></script>
+<script src="js/charts.js?v=15"></script>
+<script src="js/export.js?v=15"></script>
+<script src="js/app.js?v=15"></script>
 </body>
 </html>

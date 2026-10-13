@@ -64,7 +64,7 @@
   function addItem(form) {
     const el = (n) => form.elements.namedItem(n);
     form = { name: el("name"), parent: el("parent"), duration: el("duration"), amount: el("amount"),
-      category: el("category"), lag: el("lag"), note: el("note"),
+      lag: el("lag"), note: el("note"),
       preds: [...form.elements].filter((x) => x.name === "pred" && x.checked).map((x) => x.value) };
     const name = form.name.value.trim();
     if (!name) { toast("請輸入工作項目名稱"); form.name.focus(); return; }
@@ -77,7 +77,7 @@
       parent: form.parent.value,
       duration: Math.max(parseInt(form.duration.value, 10) || 1, 1),
       amount: Core.parseAmount(form.amount.value),
-      category: form.category.value,
+      category: "", // 分類欄位暫時取消，保留資料欄位以便日後恢復
       predecessors: form.preds,
       lag: Math.max(parseInt(form.lag.value, 10) || 0, 0),
       note: form.note.value.trim(),
@@ -211,7 +211,6 @@
         <td><select data-f="parent">${options(names.filter((n) => n !== it.name), it.parent || "", "（最上層）")}</select></td>
         <td><input type="number" min="1" data-f="duration" value="${h(it.duration)}"></td>
         <td class="amt"><input data-f="amount" inputmode="numeric" value="${Core.itemAmount(it) ? Core.formatAmount(Core.itemAmount(it)) : ""}" placeholder="選填"></td>
-        <td><span class="swatch" style="background:${Core.colorFor(it.category)}"></span><select data-f="category">${options(Core.CATEGORY_ORDER, it.category || "", "（未分類）")}</select></td>
         <td>${predPicker(it.predecessors, it.name, names, it.id)}${missing}</td>
         <td><input data-f="note" value="${h(it.note)}" placeholder="施工注意事項（帶入 Word 說明）"></td>
         <td><input type="number" min="0" data-f="lag" value="${h(it.lag || 0)}"></td>
@@ -224,7 +223,6 @@
       <td><select name="parent" form="addForm">${options(names, "", "（最上層）")}</select></td>
       <td><input type="number" min="1" name="duration" form="addForm" value="30"></td>
       <td class="amt"><input name="amount" form="addForm" inputmode="numeric" placeholder="選填"></td>
-      <td><select name="category" form="addForm">${options(Core.CATEGORY_ORDER, "", "（未分類）")}</select></td>
       <td id="addPred">${predPicker([], null, names, null)}</td>
       <td><input name="note" form="addForm" placeholder="選填"></td>
       <td><input type="number" min="0" name="lag" form="addForm" value="0"></td>
