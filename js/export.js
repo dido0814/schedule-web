@@ -92,8 +92,9 @@
         align = `<alignment${a.h ? ` horizontal="${a.h}"` : ""}${a.v ? ` vertical="${a.v}"` : ""}${a.wrap ? ' wrapText="1"' : ""}` +
           `${a.indent ? ` indent="${a.indent}"` : ""}${a.shrink ? ' shrinkToFit="1"' : ""}/>`;
       }
-      const xf = `<xf numFmtId="0" fontId="${fontId}" fillId="${fillId}" borderId="${borderId}" xfId="0"` +
-        ` applyFont="1" applyFill="1" applyBorder="1"${align ? ' applyAlignment="1">' + align + "</xf>" : "/>"}`;
+      // numFmt 為 Excel 內建格式編號：3 = #,##0、4 = #,##0.00、10 = 0.00%
+      const xf = `<xf numFmtId="${st.numFmt || 0}" fontId="${fontId}" fillId="${fillId}" borderId="${borderId}" xfId="0"` +
+        ` applyFont="1" applyFill="1" applyBorder="1"${st.numFmt ? ' applyNumberFormat="1"' : ""}${align ? ' applyAlignment="1">' + align + "</xf>" : "/>"}`;
       this.xfs.push(xf);
       const id = this.xfs.length - 1;
       this.map.set(key, id);
@@ -137,6 +138,7 @@
           const ref = colLetter(x.c) + r, s = styles.get(Object.keys(x.s).length ? x.s : null);
           if (x.v === null || x.v === "") data += `<c r="${ref}" s="${s}"/>`;
           else if (typeof x.v === "number") data += `<c r="${ref}" s="${s}"><v>${x.v}</v></c>`;
+          else if (typeof x.v === "object") data += `<c r="${ref}" s="${s}"><f>${esc(x.v.f)}</f><v>${x.v.v}</v></c>`;
           else data += `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${esc(x.v)}</t></is></c>`;
         }
         data += "</row>";
@@ -180,6 +182,7 @@ ${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" Co
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 <bookViews><workbookView/></bookViews>
 <sheets>${sheets.map((s, i) => `<sheet name="${esc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets>
+<calcPr fullCalcOnLoad="1"/>
 </workbook>` },
       { name: "xl/_rels/workbook.xml.rels", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -321,8 +324,99 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
     ws.rows[foot] = 22;
 
     const sheets = [ws];
+    const ps = progressSheet(projectName, valid, total);
+    if (ps) sheets.push(ps);
     if (hasCpm) sheets.push(cpmSheet(valid));
     return workbookBlob(sheets);
+  }
+
+  // 金額進度計算表：用公式列出「金額 → 每日金額 → 各期金額 → 累計進度」的算法，
+  // 與甘特圖最下面的累積百分比（Core.cumulativePercent）是同一套算法
+  function progressSheet(projectName, valid, total) {
+    const dur = (it) => it.end_day - it.start_day + 1;
+    const tasks = valid.filter((it) => !it.milestone && dur(it) > 0);
+    if (!tasks.length) return null;
+    const useAmount = Core.totalAmount(tasks) > 0;
+    const weight = (it) => (useAmount ? Core.itemAmount(it) : dur(it));
+    const totalW = tasks.reduce((s, it) => s + weight(it), 0);
+    const PERIOD = 10, nP = Math.max(Math.ceil(total / PERIOD), 1);
+    const P0 = 9; // 第一個期別欄（I 欄）
+    const hr1 = 3, hr2 = 4, r0 = 5, rN = r0 + tasks.length - 1, rSum = rN + 1, rCum = rSum + 1, rPct = rCum + 1;
+    const lastC = P0 + nP - 1;
+
+    const ws = new Sheet("金額進度計算表");
+    const jh = (o) => Object.assign({ name: "Microsoft JhengHei", color: "#000000" }, o);
+    const b = side("#C3C2B7"), border = { left: b, right: b, top: b, bottom: b };
+    const center = { h: "center", v: "center" }, rightA = { h: "right", v: "center" };
+    const head = { font: jh({ bold: true, color: S.navy }), fill: S.headerBg, align: { h: "center", v: "center", wrap: true }, border };
+    const sumSt = (extra) => Object.assign({ font: jh({ bold: true }), fill: "#FFF2CC", border, align: rightA }, extra);
+
+    ws.set(1, 1, `${projectName}　金額進度計算表`, { font: jh({ bold: true, size: 16, color: S.navy }) });
+    ws.set(2, 1, (useAmount ? "" : "尚未填金額，改以工期為權重（「權重」欄＝工期日數）。") +
+      "計算方式：每日金額＝金額÷工期；各期金額＝每日金額×該期內的施作天數；累計進度＝累計金額÷合計。儲存格內都是公式，可直接修改金額或起訖日重算。",
+      { font: jh({ size: 10, color: "#666666" }) });
+    ws.rows[1] = 28;
+
+    const wLabel = useAmount ? "金額(元)" : "權重\n(工期日數)";
+    ["編號", "工作項目", "起始日", "完成日", "工期(日)", wLabel, "占比(%)", useAmount ? "每日金額\n(元/日)" : "每日權重"].forEach((t, i) => {
+      ws.merge(hr1, i + 1, hr2, i + 1);
+      ws.set(hr1, i + 1, t, head); ws.set(hr2, i + 1, undefined, head);
+    });
+    for (let p = 0; p < nP; p++) {
+      const c = P0 + p;
+      ws.set(hr1, c, (p + 1) * PERIOD, head);
+      ws.set(hr2, c, `第${p * PERIOD + 1}–${(p + 1) * PERIOD}日`, head);
+    }
+    ws.rows[hr1] = 20; ws.rows[hr2] = 20;
+
+    const perDone = new Array(nP).fill(0);
+    tasks.forEach((it, i) => {
+      const r = r0 + i, d = dur(it), w = weight(it);
+      const num = { font: jh(), border, align: center };
+      ws.set(r, 1, String(it.number || ""), num);
+      ws.set(r, 2, it.name, { font: jh(), border, align: { h: "left", v: "center", indent: 1 + (it.level || 0) * 2 } });
+      ws.set(r, 3, it.start_day, num);
+      ws.set(r, 4, it.end_day, num);
+      ws.set(r, 5, { f: `D${r}-C${r}+1`, v: d }, num);
+      ws.set(r, 6, w, { font: jh(), border, align: rightA, numFmt: 3 });
+      ws.set(r, 7, { f: `IF($F$${rSum}>0,F${r}/$F$${rSum},0)`, v: totalW > 0 ? w / totalW : 0 }, { font: jh(), border, align: rightA, numFmt: 10 });
+      ws.set(r, 8, { f: `IF(E${r}>0,F${r}/E${r},0)`, v: w / d }, { font: jh(), border, align: rightA, numFmt: 4 });
+      for (let p = 0; p < nP; p++) {
+        const c = P0 + p, L = colLetter(c), end = (p + 1) * PERIOD;
+        const days = Math.max(0, Math.min(it.end_day, end) - Math.max(it.start_day, end - PERIOD + 1) + 1);
+        const v = (w / d) * days;
+        perDone[p] += v;
+        ws.set(r, c, { f: `$H${r}*MAX(0,MIN($D${r},${L}$${hr1})-MAX($C${r},${L}$${hr1}-${PERIOD - 1})+1)`, v },
+          { font: jh({ color: days ? "#000000" : "#BBBBBB" }), border, align: rightA, numFmt: 3 });
+      }
+    });
+
+    const label = (r, t) => {
+      ws.merge(r, 1, r, 5);
+      for (let c = 1; c <= 5; c++) ws.set(r, c, undefined, sumSt());
+      ws.set(r, 1, t, sumSt({ align: center }));
+      for (let c = 6; c <= 8; c++) ws.set(r, c, undefined, sumSt());
+    };
+    label(rSum, useAmount ? "本期金額合計（左側為總工程費）" : "本期權重合計");
+    label(rCum, useAmount ? "累計金額" : "累計權重");
+    label(rPct, "預定進度累積百分比(%)");
+    ws.set(rSum, 6, { f: `SUM(F${r0}:F${rN})`, v: totalW }, sumSt({ numFmt: 3 }));
+    ws.set(rSum, 7, { f: `SUM(G${r0}:G${rN})`, v: totalW > 0 ? 1 : 0 }, sumSt({ numFmt: 10 }));
+    let cum = 0;
+    for (let p = 0; p < nP; p++) {
+      const c = P0 + p, L = colLetter(c), first = colLetter(P0);
+      cum += perDone[p];
+      ws.set(rSum, c, { f: `SUM(${L}${r0}:${L}${rN})`, v: perDone[p] }, sumSt({ numFmt: 3 }));
+      ws.set(rCum, c, { f: `SUM($${first}$${rSum}:${L}$${rSum})`, v: cum }, sumSt({ numFmt: 3 }));
+      ws.set(rPct, c, { f: `IF($F$${rSum}>0,${L}${rCum}/$F$${rSum},0)`, v: totalW > 0 ? cum / totalW : 0 }, sumSt({ numFmt: 10 }));
+    }
+
+    let nameW = 22;
+    for (const it of tasks) nameW = Math.max(nameW, textWidth(it.name) + (it.level || 0) * 3 + 4);
+    [7, Math.min(nameW, 46), 8, 8, 8, 15, 10, 14].forEach((w, i) => (ws.cols[i + 1] = w));
+    for (let c = P0; c <= lastC; c++) ws.cols[c] = 13;
+    ws.freeze = [r0, P0];
+    return ws;
   }
 
   function cpmSheet(valid) {
