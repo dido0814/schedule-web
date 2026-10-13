@@ -451,8 +451,6 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
 
   function buildDocx(projectName, items, ganttCanvas) {
     const lines = Core.generateFullText(projectName, items);
-    const valid = items.filter((it) => it.name);
-    const hasCpm = valid.length > 0 && valid.every((it) => "is_critical" in it);
     const images = [];
     let body = "";
     const run = (t, opt) => `<w:r>${opt && opt.bold ? "<w:rPr><w:b/></w:rPr>" : ""}<w:t xml:space="preserve">${esc(t)}</w:t></w:r>`;
@@ -477,14 +475,7 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
     body += para(run(lines[0]));
     body += para(run("二、各工作項目工期"), "Heading2");
     lines.slice(1).forEach((l) => (body += para(run(l))));
-    let no = "三";
-    const critText = hasCpm ? Core.generateCriticalText(valid) : "";
-    if (critText) {
-      body += para(run("三、要徑說明"), "Heading2");
-      body += para(run(critText));
-      no = "四";
-    }
-    body += para(run(`${no}、施工預定進度表`), "Heading2");
+    body += para(run("三、施工預定進度表"), "Heading2");
     body += image(ganttCanvas);
     body += para(run("表○○　施工預定進度表"), null, true);
 
