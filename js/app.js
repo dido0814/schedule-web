@@ -87,16 +87,79 @@
     setTimeout(() => { const n = $("#addForm input[name=name]"); if (n) n.focus(); }, 0);
   }
 
-  function deleteItem(id) {
-    const p = project();
-    const it = p.items.find((x) => x.id === id);
-    if (!it || !confirm(`確定要刪除「${it.name}」這個工作項目嗎？`)) return;
-    p.items = p.items.filter((x) => x.id !== id);
-    for (const o of p.items) {
-      if (Array.isArray(o.predecessors)) o.predecessors = o.predecessors.filter((n) => n !== it.name);
-      if ((o.parent || "") === it.name) o.parent = "";
+  // ─────────────── 勾選列的批次操作 ───────────────
+  const selected = new Set();
+
+  function siblingsOf(items, id) {
+    const valid = items.filter((it) => it.name);
+    const byName = new Map(valid.map((it) => [it.name, it]));
+    const target = valid.find((it) => it.id === id);
+    if (!target) return null;
+    const parent = Core.effectiveParent(target, byName);
+    const sibs = valid.filter((it) => Core.effectiveParent(it, byName) === parent);
+    return { target, sibs, idx: sibs.indexOf(target), parent: parent ? byName.get(parent) : null };
+  }
+
+  function moveSelected(ids, direction) {
+    const items = project().items;
+    // 一起勾選的相鄰工項整組移動：碰到同樣被勾選的鄰居就不交換
+    for (const id of direction === "up" ? ids : ids.slice().reverse()) {
+      const s = siblingsOf(items, id);
+      if (!s) continue;
+      const nb = s.sibs[s.idx + (direction === "up" ? -1 : 1)];
+      if (!nb || selected.has(nb.id)) continue;
+      Core.moveItem(items, id, direction);
     }
-    commit();
+  }
+
+  function indentSelected(ids) {
+    const items = project().items;
+    const plan = [];
+    for (const id of ids) {
+      const s = siblingsOf(items, id);
+      // 上層也被勾選時，子項目跟著上層走，不另外處理
+      if (!s || s.target.milestone || (s.parent && selected.has(s.parent.id))) continue;
+      let i = s.idx - 1;
+      while (i >= 0 && (selected.has(s.sibs[i].id) || s.sibs[i].milestone)) i--;
+      if (i >= 0) plan.push([s.target, s.sibs[i].name]);
+    }
+    plan.forEach(([it, name]) => { it.parent = name; });
+  }
+
+  function outdentSelected(ids) {
+    const items = project().items;
+    const targets = ids.filter((id) => {
+      const s = siblingsOf(items, id);
+      return s && s.parent && !selected.has(s.parent.id);
+    });
+    targets.forEach((id) => Core.outdentItem(items, id));
+  }
+
+  function deleteSelected(ids) {
+    const p = project();
+    const gone = p.items.filter((x) => ids.includes(x.id));
+    if (!gone.length) return false;
+    const msg = gone.length === 1
+      ? `確定要刪除「${gone[0].name}」這個工作項目嗎？`
+      : `確定要刪除勾選的 ${gone.length} 個工作項目嗎？`;
+    if (!confirm(msg)) return false;
+    const names = new Set(gone.map((x) => x.name));
+    p.items = p.items.filter((x) => !ids.includes(x.id));
+    for (const o of p.items) {
+      if (Array.isArray(o.predecessors)) o.predecessors = o.predecessors.filter((n) => !names.has(n));
+      if (names.has(o.parent || "")) o.parent = "";
+    }
+    selected.clear();
+    return true;
+  }
+
+  function updateOpsBar() {
+    const n = selected.size, total = project().items.length;
+    $("#selCount").textContent = n ? `已勾選 ${n} 項` : "尚未勾選";
+    document.querySelectorAll("#opsBar button[data-op]").forEach((b) => { b.disabled = !n; });
+    const all = $("#selAll");
+    all.checked = n > 0 && n === total;
+    all.indeterminate = n > 0 && n < total;
   }
 
   // ─────────────── 畫面 ───────────────
@@ -122,6 +185,8 @@
     scheduled = Core.getScheduledItems(p);
     const total = Core.totalDuration(scheduled);
     const names = p.items.map((it) => it.name).filter(Boolean);
+    if (render.pid !== p.id) { selected.clear(); render.pid = p.id; }
+    for (const id of [...selected]) if (!p.items.some((it) => it.id === id)) selected.delete(id);
 
     // 專案選單
     $("#projectSelect").innerHTML = Object.values(store.projects)
@@ -137,7 +202,8 @@
       const tf = it.total_float || 0;
       const missing = (it._missing_predecessors || []).length
         ? `<div class="warn">找不到：${it._missing_predecessors.map(h).join("、")}</div>` : "";
-      return `<tr data-id="${it.id}" class="${it.is_critical ? "crit" : ""}">
+      return `<tr data-id="${it.id}" class="${it.is_critical ? "crit" : ""}${selected.has(it.id) ? " sel" : ""}">
+        <td class="selc"><input type="checkbox" class="rowsel" ${selected.has(it.id) ? "checked" : ""}></td>
         <td class="num">${h(it.number)}</td>
         <td class="name-cell" style="padding-left:${6 + (it.level || 0) * 18}px">
           <div class="nc">${it.level ? '<span class="tree">└</span>' : ""}<input data-f="name" value="${h(it.name)}"></div></td>
@@ -150,14 +216,10 @@
         <td><input type="number" min="0" data-f="lag" value="${h(it.lag || 0)}"></td>
         <td><input data-f="note" value="${h(it.note)}" placeholder="施工注意事項（帶入 Word 說明）"></td>
         <td class="day">${it.start_day}</td><td class="day">${it.end_day}</td>
-        <td class="day ${it.is_critical ? "tf0" : ""}">${it.is_critical ? "要徑" : tf}</td>
-        <td class="ops">
-          <button data-op="up" title="跟前一個同層工項交換">↑</button><button data-op="down" title="跟下一個同層工項交換">↓</button>
-          <button data-op="outdent" title="升一層">⇤</button><button data-op="indent" title="降一層，成為前一個同層工項的子項目">⇥</button>
-          <button data-op="del" class="del" title="刪除">✕</button></td></tr>`;
+        <td class="day ${it.is_critical ? "tf0" : ""}">${it.is_critical ? "要徑" : tf}</td></tr>`;
     }).join("");
 
-    const addRow = `<tr id="addRow"><td class="num muted">新增</td>
+    const addRow = `<tr id="addRow"><td></td><td class="num muted">新增</td>
       <td><input name="name" form="addForm" placeholder="新工作項目名稱"></td>
       <td><select name="parent" form="addForm">${options(names, "", "（最上層）")}</select></td>
       <td><input name="stage" form="addForm" placeholder="選填"></td>
@@ -167,12 +229,12 @@
       <td id="addPred">${predPicker([], null, names, null)}</td>
       <td><input type="number" min="0" name="lag" form="addForm" value="0"></td>
       <td><input name="note" form="addForm" placeholder="選填"></td>
-      <td colspan="3" class="muted">自動計算</td>
-      <td><button type="submit" form="addForm" class="btn primary sm">＋ 新增</button></td></tr>`;
+      <td colspan="3" style="text-align:center"><button type="submit" form="addForm" class="btn primary sm">＋ 新增</button></td></tr>`;
     $("#itemsBody").innerHTML = rows + addRow;
     // details 裡的 checkbox 需要掛到 addForm
     document.querySelectorAll("#addPred input[name=pred]").forEach((x) => x.setAttribute("form", "addForm"));
     $("#emptyHint").hidden = p.items.length > 0;
+    updateOpsBar();
 
     // 要徑
     const crit = scheduled.filter((it) => it.is_critical).map((it) => it.name);
@@ -210,6 +272,12 @@
       const tr = el.closest("tr[data-id]");
       if (!tr) return;
       const id = parseInt(tr.dataset.id, 10);
+      if (el.classList.contains("rowsel")) {
+        if (el.checked) selected.add(id); else selected.delete(id);
+        tr.classList.toggle("sel", el.checked);
+        updateOpsBar();
+        return;
+      }
       if (el.name === "pred") {
         const det = el.closest("details");
         const vals = [...det.querySelectorAll("input[name=pred]:checked")].map((x) => x.value);
@@ -229,19 +297,25 @@
     body.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && e.target.matches("tr[data-id] input")) e.target.blur();
     });
-    body.addEventListener("click", (e) => {
+    $("#opsBar").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-op]");
       if (!b) return;
-      const id = parseInt(b.closest("tr").dataset.id, 10);
-      const items = project().items;
+      // 依畫面由上到下的順序處理
+      const ids = scheduled.map((it) => it.id).filter((id) => selected.has(id));
+      if (!ids.length) return toast("請先勾選要操作的工作項目");
       switch (b.dataset.op) {
-        case "up": Core.moveItem(items, id, "up"); break;
-        case "down": Core.moveItem(items, id, "down"); break;
-        case "indent": Core.indentItem(items, id); break;
-        case "outdent": Core.outdentItem(items, id); break;
-        case "del": deleteItem(id); return;
+        case "up": moveSelected(ids, "up"); break;
+        case "down": moveSelected(ids, "down"); break;
+        case "indent": indentSelected(ids); break;
+        case "outdent": outdentSelected(ids); break;
+        case "del": if (!deleteSelected(ids)) return; break;
       }
       commit();
+    });
+    $("#selAll").addEventListener("change", (e) => {
+      selected.clear();
+      if (e.target.checked) project().items.forEach((it) => selected.add(it.id));
+      render();
     });
     // 點外面關閉前置工項下拉
     document.addEventListener("click", (e) => {
@@ -280,6 +354,7 @@
       const tpl = Core.listTemplates()[0];
       if (project().items.length && !confirm(`這會用「${tpl.label}」標準範本取代目前所有工作項目，確定要帶入嗎？`)) return;
       const items = Core.getTemplate(tpl.key).map((it, i) => Object.assign(it, { id: i + 1 }));
+      selected.clear();
       project().items = items; project().next_id = items.length + 1;
       commit();
     });

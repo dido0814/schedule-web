@@ -38,7 +38,7 @@
   .muted { color:var(--muted); }
   .hint { color:var(--muted); font-size:12.5px; margin-top:8px; }
   .tablewrap { overflow-x:auto; }
-  table { border-collapse:collapse; width:100%; min-width:1380px; font-size:13px; }
+  table { border-collapse:collapse; width:100%; min-width:1280px; font-size:13px; }
   th, td { border:1px solid var(--line); padding:4px 5px; vertical-align:middle; }
   th { background:var(--head); font-weight:bold; text-align:center; position:sticky; top:0; }
   th small { display:block; font-weight:normal; color:var(--muted); font-size:11px; }
@@ -59,10 +59,12 @@
   .ms-toggle { font-size:11px; color:var(--muted); display:inline-flex; align-items:center; gap:2px; cursor:pointer; }
   .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:3px; vertical-align:middle; }
   td select[data-f=category], #addRow select[name=category] { width:calc(100% - 16px); }
-  td.ops { white-space:nowrap; text-align:center; }
-  td.ops button { font:inherit; font-size:13px; width:26px; height:26px; border:1px solid var(--line); background:#fff; border-radius:4px; cursor:pointer; padding:0; }
-  td.ops button:hover { background:#eef2f7; }
-  td.ops button.del { color:var(--red); }
+  td.selc, th.selc { text-align:center; width:34px; }
+  td.selc input, th.selc input { width:16px; height:16px; cursor:pointer; vertical-align:middle; }
+  tr.sel td { background:#eef5ff; }
+  #opsBar { margin-bottom:10px; }
+  #opsBar .btn:disabled { opacity:.45; cursor:not-allowed; }
+  #selCount { min-width:86px; }
   details.pred { position:relative; }
   details.pred summary { cursor:pointer; list-style:none; padding:3px 6px; border:1px solid var(--line); border-radius:4px; background:#fff; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
   details.pred summary::after { content:" ▾"; color:var(--muted); }
@@ -117,9 +119,19 @@
   <section class="card">
     <h2>工作項目清單 <span class="sub">編號、起始日、完成日、浮時自動計算</span></h2>
     <form id="addForm"></form>
+    <div class="toolbar" id="opsBar">
+      <span class="muted" id="selCount">尚未勾選</span>
+      <button class="btn sm" data-op="up" title="跟前一個同層工項交換">↑ 上移</button>
+      <button class="btn sm" data-op="down" title="跟下一個同層工項交換">↓ 下移</button>
+      <button class="btn sm" data-op="outdent" title="升一層">⇤ 升一層</button>
+      <button class="btn sm" data-op="indent" title="降一層，成為前一個同層工項的子項目">⇥ 降一層</button>
+      <button class="btn sm danger" data-op="del">✕ 刪除</button>
+      <span class="hint" style="margin:0">先勾選左側的工作項目（可多選），再按這裡的按鈕</span>
+    </div>
     <div class="tablewrap">
       <table>
         <thead><tr>
+          <th class="selc"><input type="checkbox" id="selAll" title="全選／取消全選"></th>
           <th style="width:52px">編號</th>
           <th style="min-width:200px">工作項目</th>
           <th style="width:150px">上層工項<small>選了就變子項目</small></th>
@@ -132,7 +144,6 @@
           <th style="width:52px">起始日</th>
           <th style="width:52px">完成日</th>
           <th style="width:52px">浮時</th>
-          <th style="width:150px">操作<small>↑↓排序 ⇤⇥層級</small></th>
         </tr></thead>
         <tbody id="itemsBody"></tbody>
       </table>
@@ -150,9 +161,9 @@
 <footer>工程進度排程系統（網頁版）・ 所有計算都在你的瀏覽器內完成，不會上傳資料</footer>
 <div id="toast"></div>
 
-<script src="js/core.js?v=2"></script>
-<script src="js/charts.js?v=2"></script>
-<script src="js/export.js?v=2"></script>
-<script src="js/app.js?v=2"></script>
+<script src="js/core.js?v=3"></script>
+<script src="js/charts.js?v=3"></script>
+<script src="js/export.js?v=3"></script>
+<script src="js/app.js?v=3"></script>
 </body>
 </html>
