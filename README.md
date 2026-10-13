@@ -1,6 +1,6 @@
 # 工程進度排程系統（網頁版）
 
-線上使用：https://dido0814.github.io/schedule/
+線上使用：https://dido0814.github.io/schedule-web/
 
 投標階段快速排「工程預定進度表」的小工具：輸入工作項目與前置關係，自動計算起訖日、要徑（CPM）與浮時，並產生甘特圖、PDM 要徑網圖，可匯出 Excel／Word／PNG。
 
