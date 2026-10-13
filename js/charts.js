@@ -57,7 +57,9 @@
     return rows;
   }
 
-  function renderGantt(items, projectName) {
+  // opts.showCurve === false 時不畫累積進度曲線（最下面的百分比列仍保留）
+  function renderGantt(items, projectName, opts) {
+    const showCurve = !opts || opts.showCurve !== false;
     let valid = items.filter((it) => it.name);
     const empty = !valid.length;
     if (empty) valid = [{ name: "(尚未輸入工作項目)", start_day: 1, end_day: 1 }];
@@ -164,7 +166,7 @@
     rect(ctx, x0, tTop, gxEnd - x0, tBot - tTop, null, "#333333", 1.2);
 
     // S 曲線（0~100% 對應表格下緣~上緣，上下各留 4%）
-    if (!empty) {
+    if (!empty && showCurve) {
       const pctY = (p) => tBot - ((p + 4) / 108) * (tBot - tTop);
       const step = Math.max(1, Math.floor(axisMax / 200));
       ctx.beginPath();
@@ -181,7 +183,8 @@
     // 圖例
     const ly = tBot + 26;
     let lx = x0;
-    const legend = [[C.critical, "主要路徑（要徑）"], [C.normal, "一般路徑"], [C.float, "浮時"], [C.curve, "累積進度曲線"]];
+    const legend = [[C.critical, "主要路徑（要徑）"], [C.normal, "一般路徑"], [C.float, "浮時"]];
+    if (showCurve) legend.push([C.curve, "累積進度曲線"]);
     ctx.font = font(12.5);
     for (const [color, label] of legend) {
       if (label === "累積進度曲線") line(ctx, lx, ly, lx + 28, ly, color, 1.8, [6, 4]);

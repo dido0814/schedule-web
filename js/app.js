@@ -199,6 +199,7 @@
     $("#totalBadge").textContent = `總工期：${total} 日曆天`;
     $("#amountBadge").textContent = `總工程費：${Core.formatAmount(Core.totalAmount(scheduled))} 元`;
     $("#itemCount").textContent = `${p.items.length} 項`;
+    $("#showCurve").checked = p.showCurve !== false;
 
     // 表格
     const rows = scheduled.map((it) => {
@@ -253,9 +254,11 @@
     clearTimeout(chartTimer);
     chartTimer = setTimeout(drawCharts, 60);
   }
+  // 專案沒設定過時預設顯示曲線
+  const ganttOpts = () => ({ showCurve: project().showCurve !== false });
   function drawCharts() {
     const p = project();
-    const g = Charts.renderGantt(scheduled, p.name);
+    const g = Charts.renderGantt(scheduled, p.name, ganttOpts());
     $("#gantt").replaceChildren(g);
   }
 
@@ -368,6 +371,8 @@
       project().items = []; commit();
     });
 
+    $("#showCurve").addEventListener("change", (e) => { project().showCurve = e.target.checked; commit(); });
+
     $("#btnExcel").addEventListener("click", () => {
       const p = project();
       if (!scheduled.length) return toast("請先新增工作項目");
@@ -376,17 +381,17 @@
     $("#btnWord").addEventListener("click", () => {
       const p = project();
       if (!scheduled.length) return toast("請先新增工作項目");
-      const g = Charts.renderGantt(scheduled, p.name);
+      const g = Charts.renderGantt(scheduled, p.name, ganttOpts());
       Exporter.download(Exporter.buildDocx(p.name, scheduled, g), `${safeName(p.name)}_工程預定進度說明.docx`);
     });
     $("#btnPng").addEventListener("click", () => {
       const p = project();
-      Charts.renderGantt(scheduled, p.name).toBlob((b) => Exporter.download(b, `${safeName(p.name)}_甘特圖.png`));
+      Charts.renderGantt(scheduled, p.name, ganttOpts()).toBlob((b) => Exporter.download(b, `${safeName(p.name)}_甘特圖.png`));
     });
 
     $("#btnExportJson").addEventListener("click", () => {
       const p = project();
-      const data = { format: "engineering-schedule", version: 1, name: p.name, items: p.items, next_id: p.next_id };
+      const data = { format: "engineering-schedule", version: 1, name: p.name, items: p.items, next_id: p.next_id, showCurve: p.showCurve !== false };
       Exporter.download(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), `${safeName(p.name)}.排程.json`);
     });
     $("#btnImportJson").addEventListener("click", () => $("#fileInput").click());
@@ -401,6 +406,7 @@
           for (const d of list) {
             if (!Array.isArray(d.items)) throw new Error("格式不符");
             const p = newProject(d.name || f.name.replace(/\.json$/i, ""), d.items);
+            if (d.showCurve === false) p.showCurve = false;
             store.projects[p.id] = p; last = p;
           }
         } catch (err) {
