@@ -306,17 +306,18 @@
   const TEMPLATES = {
     road: {
       label: "道路工程",
+      // 金額為預設值，以總工程費 5,000 萬為基準分配；「路面工程」由子項目填金額，上層不填以免重複計入
       items: [
-        { name: "施工前準備", section: "", duration: 30, predecessors: [], lag: 0, note: "含機具進場、工地圍籬、假設工程、施工放樣及交通維持計畫申請", category: "準備工程" },
-        { name: "路基開挖及土方工程", section: "", duration: 60, predecessors: ["施工前準備"], lag: 0, note: "依土質狀況調整開挖坡度與擋土支撐方式", category: "土方/路基工程" },
-        { name: "排水工程(涵管/側溝)", section: "", duration: 45, predecessors: ["施工前準備"], lag: 15, note: "配合路基開挖進度分區施作，避開豪雨期間", category: "排水工程" },
+        { name: "施工前準備", section: "", duration: 30, amount: 2500000, predecessors: [], lag: 0, note: "含機具進場、工地圍籬、假設工程、施工放樣及交通維持計畫申請", category: "準備工程" },
+        { name: "路基開挖及土方工程", section: "", duration: 60, amount: 10000000, predecessors: ["施工前準備"], lag: 0, note: "依土質狀況調整開挖坡度與擋土支撐方式", category: "土方/路基工程" },
+        { name: "排水工程(涵管/側溝)", section: "", duration: 45, amount: 7500000, predecessors: ["施工前準備"], lag: 15, note: "配合路基開挖進度分區施作，避開豪雨期間", category: "排水工程" },
         { name: "路面工程", section: "", duration: 95, predecessors: ["路基開挖及土方工程", "排水工程(涵管/側溝)"], lag: 0, note: "", category: "路面工程" },
-        { name: "路床及級配層舖築", section: "", duration: 40, predecessors: ["路基開挖及土方工程", "排水工程(涵管/側溝)"], lag: 0, note: "分層滾壓，每層壓實度須達規範要求", category: "路面工程", parent: "路面工程" },
-        { name: "瀝青混凝土基層舖築", section: "", duration: 30, predecessors: ["路床及級配層舖築"], lag: 0, note: "", category: "路面工程", parent: "路面工程" },
-        { name: "瀝青混凝土面層舖築", section: "", duration: 25, predecessors: ["瀝青混凝土基層舖築"], lag: 0, note: "面層攤鋪應注意氣溫及雨天不可施工限制", category: "路面工程", parent: "路面工程" },
-        { name: "交通標誌標線及安全設施", section: "", duration: 20, predecessors: ["瀝青混凝土面層舖築"], lag: 0, note: "", category: "交通安全設施" },
-        { name: "邊坡植生綠美化", section: "", duration: 30, predecessors: ["路基開挖及土方工程"], lag: 30, note: "與路面工程平行施作，不影響要徑", category: "環境綠美化" },
-        { name: "工區整理及完工清理", section: "", duration: 15, predecessors: ["交通標誌標線及安全設施", "邊坡植生綠美化"], lag: 0, note: "", category: "其他" },
+        { name: "路床及級配層舖築", section: "", duration: 40, amount: 7500000, predecessors: ["路基開挖及土方工程", "排水工程(涵管/側溝)"], lag: 0, note: "分層滾壓，每層壓實度須達規範要求", category: "路面工程", parent: "路面工程" },
+        { name: "瀝青混凝土基層舖築", section: "", duration: 30, amount: 8000000, predecessors: ["路床及級配層舖築"], lag: 0, note: "", category: "路面工程", parent: "路面工程" },
+        { name: "瀝青混凝土面層舖築", section: "", duration: 25, amount: 7000000, predecessors: ["瀝青混凝土基層舖築"], lag: 0, note: "面層攤鋪應注意氣溫及雨天不可施工限制", category: "路面工程", parent: "路面工程" },
+        { name: "交通標誌標線及安全設施", section: "", duration: 20, amount: 3500000, predecessors: ["瀝青混凝土面層舖築"], lag: 0, note: "", category: "交通安全設施" },
+        { name: "邊坡植生綠美化", section: "", duration: 30, amount: 2500000, predecessors: ["路基開挖及土方工程"], lag: 30, note: "與路面工程平行施作，不影響要徑", category: "環境綠美化" },
+        { name: "工區整理及完工清理", section: "", duration: 15, amount: 1500000, predecessors: ["交通標誌標線及安全設施", "邊坡植生綠美化"], lag: 0, note: "", category: "其他" },
       ],
     },
   };
