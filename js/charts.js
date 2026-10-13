@@ -57,7 +57,7 @@
     return rows;
   }
 
-  // opts.showCurve === false 時不畫累積進度曲線（最下面的百分比列仍保留）
+  // opts.showCurve === false 時不畫累積進度曲線，最下面的累積百分比列也一併拿掉
   function renderGantt(items, projectName, opts) {
     const showCurve = !opts || opts.showCurve !== false;
     let valid = items.filter((it) => it.name);
@@ -89,7 +89,9 @@
     const chartW = axisMax * dayPx;
     const rowH = 30;
     const pad = 20, titleH = 46, legendH = 46;
-    const nRowsTotal = rows.length + 2; // 表頭 + 內容 + 累積列
+    const nRowsTotal = rows.length + (showCurve ? 2 : 1); // 表頭 + 內容 (+ 累積列)
+    // 有下層的工項只當標題列，不畫長條
+    const parentNames = new Set(valid.map((it) => it._effective_parent).filter(Boolean));
     const tableH = nRowsTotal * rowH;
     const W = pad * 2 + labelW + chartW;
     const H = pad + titleH + tableH + legendH + pad;
@@ -131,9 +133,10 @@
       const start = it.start_day || 1, end = it.end_day == null ? start : it.end_day;
       const dur = end - start + 1;
       text(ctx, String(it.number || ""), (x0 + col1) / 2, cy, { size: 12, align: "center" });
-      text(ctx, "　".repeat(it.level || 0) + it.name, col1 + 8, cy, { size: 13 });
+      const isParent = parentNames.has(it.name);
+      text(ctx, "　".repeat(it.level || 0) + it.name, col1 + 8, cy, { size: 13, bold: isParent });
       text(ctx, it.milestone ? "-" : String(dur), (col2 + gx) / 2, cy, { size: 12, align: "center" });
-      if (empty) return;
+      if (empty || isParent) return;
       if (it.milestone) {
         const mx = dayX(end), s = 8;
         ctx.beginPath();
@@ -150,10 +153,12 @@
 
     // 累積進度列
     const cumR = rows.length + 1, cumY = rowY(cumR), cumCy = cumY + rowH / 2;
-    rect(ctx, x0, cumY, gxEnd - x0, rowH, C.headerGreen);
-    text(ctx, "預定進度累積百分比(%)", (x0 + col2) / 2, cumCy, { size: 12, bold: true, color: C.headerText, align: "center" });
+    if (showCurve) {
+      rect(ctx, x0, cumY, gxEnd - x0, rowH, C.headerGreen);
+      text(ctx, "預定進度累積百分比(%)", (x0 + col2) / 2, cumCy, { size: 12, bold: true, color: C.headerText, align: "center" });
+    }
     const cumPct = empty ? () => 0 : Core.cumulativePercent(valid);
-    for (let m = 0; m < nMonths; m++) {
+    for (let m = 0; showCurve && m < nMonths; m++) {
       text(ctx, cumPct((m + 1) * TICK_DAYS).toFixed(0), dayX(m * TICK_DAYS + TICK_DAYS / 2), cumCy,
         { size: 11.5, bold: true, color: C.headerText, align: "center" });
     }
@@ -165,19 +170,21 @@
     for (const vx of [col1, col2, gx]) line(ctx, vx, tTop, vx, tBot, "#888888", 0.8);
     rect(ctx, x0, tTop, gxEnd - x0, tBot - tTop, null, "#333333", 1.2);
 
-    // S 曲線（0~100% 對應表格下緣~上緣，上下各留 4%）
-    if (!empty && showCurve) {
-      const pctY = (p) => tBot - ((p + 4) / 108) * (tBot - tTop);
-      const step = Math.max(1, Math.floor(axisMax / 200));
+    // S 曲線：只畫在工作項目列的範圍內（不壓到上下的綠色列），
+    // 起點＝第 0 日 0%（工項區左下角），終點＝完工日 100%（工項區上緣）
+    const finish = empty ? 0 : valid.reduce((m, it) => Math.max(m, it.end_day || 0), 0);
+    if (showCurve && finish > 0) {
+      const cTop = rowY(1), cBot = rowY(rows.length + 1);
+      const pctY = (p) => cBot - (Math.min(Math.max(p, 0), 100) / 100) * (cBot - cTop);
+      const step = Math.max(1, Math.floor(finish / 200));
       ctx.beginPath();
       ctx.strokeStyle = C.curve; ctx.lineWidth = 1.8; ctx.setLineDash([6, 4]);
-      for (let d = 0; d <= axisMax; d += step) {
-        const x = dayX(d), y = pctY(cumPct(d));
-        d === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-      ctx.lineTo(dayX(axisMax), pctY(cumPct(axisMax)));
+      ctx.moveTo(dayX(0), pctY(0));
+      for (let d = step; d < finish; d += step) ctx.lineTo(dayX(d), pctY(cumPct(d)));
+      ctx.lineTo(dayX(finish), pctY(100));
       ctx.stroke(); ctx.setLineDash([]);
-      ctx.beginPath(); ctx.fillStyle = C.curve; ctx.arc(dayX(0), pctY(0), 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = C.curve;
+      for (const [x, y] of [[dayX(0), pctY(0)], [dayX(finish), pctY(100)]]) { ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill(); }
     }
 
     // 圖例

@@ -294,7 +294,7 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
       }
       const dur = it.end_day - it.start_day + 1;
       ws.set(row, 3, dur, durStyle);
-      if (dur > 0) {
+      if (dur > 0 && !isParent) { // 有下層的工項只當標題列，不畫長條
         const bar = hasCpm && it.is_critical ? S.barRed : level > 0 ? S.barChild : S.barBlue;
         const bs = side(bg, "thick");
         const sc = dayCol(it.start_day - 1), ec = dayCol(it.end_day - 1);
