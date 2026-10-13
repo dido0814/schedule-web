@@ -210,10 +210,10 @@
           <div class="nc">${it.level ? '<span class="tree">└</span>' : ""}<input data-f="name" value="${h(it.name)}"></div></td>
         <td><select data-f="parent">${options(names.filter((n) => n !== it.name), it.parent || "", "（最上層）")}</select></td>
         <td><input type="number" min="1" data-f="duration" value="${h(it.duration)}"></td>
+        <td><input type="number" min="0" data-f="lag" value="${h(it.lag || 0)}"></td>
         <td class="amt"><input data-f="amount" inputmode="numeric" value="${Core.itemAmount(it) ? Core.formatAmount(Core.itemAmount(it)) : ""}" placeholder="選填"></td>
         <td>${predPicker(it.predecessors, it.name, names, it.id)}${missing}</td>
         <td><input data-f="note" value="${h(it.note)}" placeholder="施工注意事項（帶入 Word 說明）"></td>
-        <td><input type="number" min="0" data-f="lag" value="${h(it.lag || 0)}"></td>
         <td class="day">${it.start_day}</td><td class="day">${it.end_day}</td>
         <td class="day ${it.is_critical ? "tf0" : ""}">${it.is_critical ? "要徑" : tf}</td></tr>`;
     }).join("");
@@ -222,10 +222,10 @@
       <td><input name="name" form="addForm" placeholder="新工作項目名稱"></td>
       <td><select name="parent" form="addForm">${options(names, "", "（最上層）")}</select></td>
       <td><input type="number" min="1" name="duration" form="addForm" value="30"></td>
+      <td><input type="number" min="0" name="lag" form="addForm" value="0"></td>
       <td class="amt"><input name="amount" form="addForm" inputmode="numeric" placeholder="選填"></td>
       <td id="addPred">${predPicker([], null, names, null)}</td>
       <td><input name="note" form="addForm" placeholder="選填"></td>
-      <td><input type="number" min="0" name="lag" form="addForm" value="0"></td>
       <td colspan="3" style="text-align:center"><button type="submit" form="addForm" class="btn primary sm">＋ 新增</button></td></tr>`;
     $("#itemsBody").innerHTML = rows + addRow;
     // details 裡的 checkbox 需要掛到 addForm
